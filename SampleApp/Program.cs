@@ -25,8 +25,8 @@ namespace SampleApp
         public CalculatorForm()
         {
             Text = "Calculator";
-            Width = 320;
-            Height = 450;
+            ClientSize = new Size(480, 650);
+            MinimumSize = new Size(480, 650);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
@@ -36,9 +36,10 @@ namespace SampleApp
                 Text = "0",
                 ReadOnly = true,
                 TextAlign = HorizontalAlignment.Right,
-                Font = new Font("Segoe UI", 24),
+                Font = new Font("Segoe UI", 36, FontStyle.Regular),
                 Dock = DockStyle.Top,
-                Height = 60
+                Height = 100,
+                Margin = new Padding(10)
             };
 
             Controls.Add(display);
@@ -48,7 +49,7 @@ namespace SampleApp
                 Dock = DockStyle.Fill,
                 ColumnCount = 4,
                 RowCount = 5,
-                Padding = new Padding(8)
+                Padding = new Padding(12)
             };
 
             for (int i = 0; i < 4; i++)
@@ -82,8 +83,9 @@ namespace SampleApp
                 {
                     Text = text,
                     Dock = DockStyle.Fill,
-                    Font = new Font("Segoe UI", 16),
-                    Margin = new Padding(3)
+                    Font = new Font("Segoe UI", 22, FontStyle.Regular),
+                    Margin = new Padding(5),
+                    MinimumSize = new Size(80, 70)
                 };
 
                 button.Click += Button_Click;
