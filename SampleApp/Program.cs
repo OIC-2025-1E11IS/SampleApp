@@ -1,74 +1,230 @@
+using System;
+using System.Drawing;
+using System.Globalization;
+using System.Windows.Forms;
+
 namespace SampleApp
 {
     internal class Program
     {
-        static void Main(string[] args)
+        [STAThread]
+        static void Main()
         {
-            Console.WriteLine("=== Calculator ===");
-            Console.WriteLine("計算例: 10 + 5");
-            Console.WriteLine("終了する場合は q を入力してください。\n");
+            ApplicationConfiguration.Initialize();
+            Application.Run(new CalculatorForm());
+        }
+    }
 
-            while (true)
+    public class CalculatorForm : Form
+    {
+        private readonly TextBox display;
+        private double firstNumber;
+        private string operation = "";
+        private bool newNumber = true;
+
+        public CalculatorForm()
+        {
+            Text = "Calculator";
+            Width = 320;
+            Height = 450;
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            StartPosition = FormStartPosition.CenterScreen;
+
+            display = new TextBox
             {
-                Console.Write("計算式 > ");
-                string? input = Console.ReadLine();
+                Text = "0",
+                ReadOnly = true,
+                TextAlign = HorizontalAlignment.Right,
+                Font = new Font("Segoe UI", 24),
+                Dock = DockStyle.Top,
+                Height = 60
+            };
 
-                if (string.IsNullOrWhiteSpace(input))
+            Controls.Add(display);
+
+            var panel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 4,
+                RowCount = 5,
+                Padding = new Padding(8)
+            };
+
+            for (int i = 0; i < 4; i++)
+            {
+                panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                panel.RowStyles.Add(new RowStyle(SizeType.Percent, 20));
+            }
+
+            string[] buttons =
+            {
+                "7", "8", "9", "÷",
+                "4", "5", "6", "×",
+                "1", "2", "3", "-",
+                "0", ".", "=", "+",
+                "C", "←", "", ""
+            };
+
+            foreach (string text in buttons)
+            {
+                if (text == "")
                 {
+                    panel.Controls.Add(new Label());
                     continue;
                 }
 
-                if (input.Trim().Equals("q", StringComparison.OrdinalIgnoreCase))
+                var button = new Button
                 {
-                    Console.WriteLine("終了します。");
+                    Text = text,
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Segoe UI", 16),
+                    Margin = new Padding(3)
+                };
+
+                button.Click += Button_Click;
+                panel.Controls.Add(button);
+            }
+
+            Controls.Add(panel);
+        }
+
+        private void Button_Click(object? sender, EventArgs e)
+        {
+            if (sender is not Button button)
+            {
+                return;
+            }
+
+            string value = button.Text;
+
+            if (double.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out _)
+                || value == ".")
+            {
+                EnterNumber(value);
+                return;
+            }
+
+            switch (value)
+            {
+                case "+":
+                case "-":
+                case "×":
+                case "÷":
+                    SetOperation(value);
                     break;
-                }
+                case "=":
+                    Calculate();
+                    break;
+                case "C":
+                    Clear();
+                    break;
+                case "←":
+                    Backspace();
+                    break;
+            }
+        }
 
-                string[] parts = input.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        private void EnterNumber(string value)
+        {
+            if (newNumber)
+            {
+                display.Text = value == "." ? "0." : value;
+                newNumber = false;
+                return;
+            }
 
-                if (parts.Length != 3)
-                {
-                    Console.WriteLine("エラー: 「数字 演算子 数字」の形式で入力してください。例: 10 + 5\n");
-                    continue;
-                }
+            if (value == "." && display.Text.Contains("."))
+            {
+                return;
+            }
 
-                if (!double.TryParse(parts[0], out double number1) ||
-                    !double.TryParse(parts[2], out double number2))
-                {
-                    Console.WriteLine("エラー: 数字を正しく入力してください。\n");
-                    continue;
-                }
+            if (display.Text == "0" && value != ".")
+            {
+                display.Text = value;
+            }
+            else
+            {
+                display.Text += value;
+            }
+        }
 
-                string operation = parts[1];
-                double result;
+        private void SetOperation(string value)
+        {
+            if (!double.TryParse(display.Text, out firstNumber))
+            {
+                return;
+            }
 
-                switch (operation)
-                {
-                    case "+":
-                        result = number1 + number2;
-                        break;
-                    case "-":
-                        result = number1 - number2;
-                        break;
-                    case "*":
-                    case "×":
-                        result = number1 * number2;
-                        break;
-                    case "/":
-                    case "÷":
-                        if (number2 == 0)
-                        {
-                            Console.WriteLine("エラー: 0で割ることはできません。\n");
-                            continue;
-                        }
-                        result = number1 / number2;
-                        break;
-                    default:
-                        Console.WriteLine("エラー: 演算子は +、-、*、/ のいずれかを入力してください。\n");
-                        continue;
-                }
+            operation = value;
+            newNumber = true;
+        }
 
-                Console.WriteLine($"結果: {result}\n");
+        private void Calculate()
+        {
+            if (string.IsNullOrEmpty(operation) ||
+                !double.TryParse(display.Text, out double secondNumber))
+            {
+                return;
+            }
+
+            double result;
+
+            switch (operation)
+            {
+                case "+":
+                    result = firstNumber + secondNumber;
+                    break;
+                case "-":
+                    result = firstNumber - secondNumber;
+                    break;
+                case "×":
+                    result = firstNumber * secondNumber;
+                    break;
+                case "÷":
+                    if (secondNumber == 0)
+                    {
+                        MessageBox.Show("0で割ることはできません。", "エラー");
+                        Clear();
+                        return;
+                    }
+                    result = firstNumber / secondNumber;
+                    break;
+                default:
+                    return;
+            }
+
+            display.Text = result.ToString(CultureInfo.InvariantCulture);
+            operation = "";
+            newNumber = true;
+        }
+
+        private void Clear()
+        {
+            display.Text = "0";
+            firstNumber = 0;
+            operation = "";
+            newNumber = true;
+        }
+
+        private void Backspace()
+        {
+            if (newNumber)
+            {
+                return;
+            }
+
+            if (display.Text.Length <= 1)
+            {
+                display.Text = "0";
+            }
+            else
+            {
+                display.Text = display.Text[..^1];
             }
         }
     }
